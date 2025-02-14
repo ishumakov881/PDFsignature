@@ -26,6 +26,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     // MainScreen()
                     PdfSignatureScreen1()
+                    //PdfViewerExample()
                 }
             }
         }
