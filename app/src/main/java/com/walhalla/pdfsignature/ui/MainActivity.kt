@@ -5,26 +5,28 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.InsertDriveFile
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
-import com.walhalla.pdfsignature.ui.navigation.Screen
-import com.walhalla.pdfsignature.ui.screens.CurrentDocumentScreen
-import com.walhalla.pdfsignature.ui.screens.DocumentListScreen
-import com.walhalla.pdfsignature.ui.screens.NotationEditorScreen
+import androidx.navigation.compose.*
+import com.pdfsignature.data.preferences.AppPreferences
+import com.pdfsignature.ui.navigation.Screen
+import com.pdfsignature.ui.screens.*
+import com.walhalla.pdfsignature.ui.theme.PDFsignatureTheme
+import org.koin.android.ext.android.inject
 
 class MainActivity : ComponentActivity() {
+    private val preferences: AppPreferences by inject()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MainScreen()
+            val isDarkTheme by preferences.isDarkTheme.collectAsState(initial = false)
+            PDFsignatureTheme(darkTheme = isDarkTheme) {
+                MainScreen()
+            }
         }
     }
 }
@@ -36,12 +38,22 @@ fun MainScreen() {
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("PDF Signature") },
+                actions = {
+                    IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
+                        Icon(Icons.Default.Settings, contentDescription = "Настройки")
+                    }
+                }
+            )
+        },
         bottomBar = {
             NavigationBar {
                 Screen.bottomNavItems.forEach { screen ->
                     NavigationBarItem(
                         selected = currentRoute == screen.route,
-                        onClick = { 
+                        onClick = {
                             if (currentRoute != screen.route) {
                                 navController.navigate(screen.route) {
                                     popUpTo(navController.graph.startDestinationId)
@@ -51,9 +63,23 @@ fun MainScreen() {
                         },
                         icon = {
                             when (screen) {
-                                Screen.CurrentDocument -> Icon(Icons.Default.InsertDriveFile, contentDescription = "Current Document")
-                                Screen.DocumentList -> Icon(Icons.Default.List, contentDescription = "Document List")
-                                Screen.NotationEditor -> Icon(Icons.Default.Edit, contentDescription = "Editor")
+                                Screen.CurrentDocument -> Icon(
+                                    Icons.AutoMirrored.Filled.InsertDriveFile,
+                                    contentDescription = "Current Document"
+                                )
+                                Screen.DocumentList -> Icon(
+                                    Icons.Default.List,
+                                    contentDescription = "Document List"
+                                )
+                                Screen.NotationEditor -> Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = "Editor"
+                                )
+                                Screen.SignedDocuments -> Icon(
+                                    Icons.Default.History,
+                                    contentDescription = "History"
+                                )
+                                else -> {}
                             }
                         },
                         label = {
@@ -62,6 +88,8 @@ fun MainScreen() {
                                     Screen.CurrentDocument -> "Текущий"
                                     Screen.DocumentList -> "Документы"
                                     Screen.NotationEditor -> "Редактор"
+                                    Screen.SignedDocuments -> "История"
+                                    else -> ""
                                 }
                             )
                         }
@@ -83,6 +111,12 @@ fun MainScreen() {
             }
             composable(Screen.NotationEditor.route) {
                 NotationEditorScreen()
+            }
+            composable(Screen.SignedDocuments.route) {
+                SignedDocumentsScreen(navController = navController)
+            }
+            composable(Screen.Settings.route) {
+                SettingsScreen()
             }
         }
     }

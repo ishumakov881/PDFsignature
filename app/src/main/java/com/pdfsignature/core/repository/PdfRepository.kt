@@ -1,4 +1,4 @@
-package com.walhalla.pdfsignature.core.repository
+package com.pdfsignature.core.repository
 
 import android.graphics.Bitmap
 import java.io.File
@@ -10,10 +10,29 @@ interface PdfRepository {
     suspend fun getPdfFromRemote(url: String): File
     suspend fun savePdfWithSignature(file: File, signature: Bitmap, page: Int, x: Float, y: Float): File
     suspend fun getAllDocuments(): Flow<List<PdfDocument>>
+    suspend fun getSignedDocuments(): Flow<List<PdfDocument>>
     suspend fun saveSignatureNotation(documentId: String, page: Int, x: Float, y: Float)
     suspend fun getSignatureNotations(documentId: String): Flow<List<SignatureNotation>>
     suspend fun removeSignatureFromPdf(file: File, page: Int, x: Float, y: Float): File
     suspend fun saveDocument(document: PdfDocument)
+    suspend fun updateNotationPosition(
+        documentId: String,
+        page: Int,
+        oldX: Float,
+        oldY: Float,
+        newX: Float,
+        newY: Float
+    )
+    suspend fun deleteNotation(
+        documentId: String,
+        page: Int,
+        x: Float,
+        y: Float
+    )
+    suspend fun createSignedPdfCopy(
+        file: File,
+        notations: List<SignatureNotation>
+    ): File
 }
 
 data class PdfDocument(

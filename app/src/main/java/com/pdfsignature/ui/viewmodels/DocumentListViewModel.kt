@@ -1,9 +1,9 @@
-package com.walhalla.pdfsignature.ui.viewmodels
+package com.pdfsignature.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.walhalla.pdfsignature.core.repository.PdfDocument
-import com.walhalla.pdfsignature.core.repository.PdfRepository
+import com.pdfsignature.core.repository.PdfDocument
+import com.pdfsignature.core.repository.PdfRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.*

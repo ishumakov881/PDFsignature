@@ -1,4 +1,4 @@
-package com.walhalla.pdfsignature.ui.components
+package com.pdfsignature.ui.components
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.BorderStroke

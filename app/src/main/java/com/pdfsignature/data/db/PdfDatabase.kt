@@ -7,6 +7,7 @@ import com.pdfsignature.data.db.dao.SignatureNotationDao
 import com.pdfsignature.data.db.entity.PdfDocumentEntity
 import com.pdfsignature.data.db.entity.SignatureNotationEntity
 
+
 @Database(
     entities = [
         PdfDocumentEntity::class,
@@ -14,6 +15,7 @@ import com.pdfsignature.data.db.entity.SignatureNotationEntity
     ],
     version = 1
 )
+
 abstract class PdfDatabase : RoomDatabase() {
     abstract fun pdfDocumentDao(): PdfDocumentDao
     abstract fun signatureNotationDao(): SignatureNotationDao

@@ -1,5 +1,3 @@
-
-
 val room_version = "2.6.1"
 
 plugins {
@@ -80,11 +78,6 @@ dependencies {
     implementation(libs.koin.compose)
     implementation(libs.koin.compose.navigation)
 
-    //implementation(libs.androidpdfviewerv2)
-
-
-
-
     implementation("androidx.room:room-runtime:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
     implementation("androidx.compose.material:material-icons-extended:1.7.7")
@@ -92,4 +85,11 @@ dependencies {
     // If this project uses any Kotlin source, use Kotlin Symbol Processing (KSP)
     // See Add the KSP plugin to your project
     ksp("androidx.room:room-compiler:$room_version")
+
+    //implementation("com.github.barteksc:android-pdf-viewer:2.8.2")
+    implementation("com.github.VERO-Digital-Solutions:AndroidPdfViewerV2:1195a3d7d6") {
+        exclude(group = "com.android.support")
+    }
+
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
 }

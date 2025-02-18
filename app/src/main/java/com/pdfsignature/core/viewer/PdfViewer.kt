@@ -1,4 +1,4 @@
-package com.walhalla.pdfsignature.core.viewer
+package com.pdfsignature.core.viewer
 
 import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
@@ -21,5 +21,8 @@ data class PdfNotation(
     val y: Float, // Y в процентах (0-100)
     val width: Float = 20f, // Ширина в процентах от ширины страницы
     val height: Float = 10f, // Высота в процентах от высоты страницы
-    val signatureBitmap: Bitmap? = null
+    val signatureBitmap: Bitmap? = null,
+    val isDraggable: Boolean = false,
+    val onDragStart: ((PdfNotation) -> Unit)? = null,
+    val onDragEnd: ((PdfNotation, Float, Float) -> Unit)? = null
 ) 

@@ -1,4 +1,4 @@
-package com.walhalla.pdfsignature.ui.screens
+package com.pdfsignature.ui.screens
 
 import android.annotation.SuppressLint
 import android.provider.OpenableColumns
@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.RemoveRedEye
@@ -19,8 +20,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.walhalla.pdfsignature.ui.navigation.Screen
-import com.walhalla.pdfsignature.ui.viewmodels.DocumentListViewModel
+import com.pdfsignature.ui.navigation.Screen
+import com.pdfsignature.ui.viewmodels.DocumentListViewModel
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -72,7 +73,7 @@ fun DocumentListScreen(
                 actions = {
                     IconButton(onClick = { viewModel.importPdfFromStorage() }) {
                         Icon(
-                            imageVector = Icons.Default.Upload,
+                            imageVector = Icons.Default.Download,
                             contentDescription = "Импорт PDF"
                         )
                     }

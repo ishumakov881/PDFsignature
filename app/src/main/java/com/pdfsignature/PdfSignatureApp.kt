@@ -4,10 +4,12 @@ import android.app.Application
 import android.content.Context
 import com.pdfsignature.di.appModule
 
-import com.walhalla.pdfsignature.core.repository.PdfRepository
-import com.walhalla.pdfsignature.core.viewer.PdfViewer
+import com.pdfsignature.core.repository.PdfRepository
+import com.pdfsignature.di.databaseModule
+import com.pdfsignature.core.viewer.PdfViewer
+import com.pdfsignature.data.preferences.AppPreferences
 import com.walhalla.pdfsignature.data.repository.PdfRepositoryImpl
-import com.walhalla.pdfsignature.ui.components.PdfViewerImpl
+import com.pdfsignature.ui.components.PdfViewerImpl
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -21,6 +23,7 @@ class PdfSignatureApp : Application() {
 
         val x = module{
             single<Context> { applicationContext }
+            single { AppPreferences(get()) }
             single<PdfRepository> { PdfRepositoryImpl(get(), get(), get()) }
             single<PdfViewer> { PdfViewerImpl() }
         }
@@ -28,7 +31,7 @@ class PdfSignatureApp : Application() {
         startKoin {
             androidLogger(Level.ERROR)
             androidContext(this@PdfSignatureApp)
-            modules(listOf(x, appModule, com.walhalla.pdfsignature.di.databaseModule))
+            modules(listOf(x, appModule, databaseModule))
         }
     }
 } 

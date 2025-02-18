@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "088bccc5509f907eba902d0c42709191",
+    "identityHash": "cd9632206512abb5247fbbaa16b4491e",
     "entities": [
       {
         "tableName": "pdf_documents",
@@ -56,13 +56,13 @@
       },
       {
         "tableName": "signature_notations",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `documentId` TEXT NOT NULL, `page` INTEGER NOT NULL, `x` REAL NOT NULL, `y` REAL NOT NULL, `width` REAL NOT NULL, `height` REAL NOT NULL, `signatureImage` TEXT, FOREIGN KEY(`documentId`) REFERENCES `pdf_documents`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `documentId` TEXT NOT NULL, `page` INTEGER NOT NULL, `xPercent` REAL NOT NULL, `yPercent` REAL NOT NULL, `widthPercent` REAL NOT NULL, `heightPercent` REAL NOT NULL, `signatureImage` TEXT, FOREIGN KEY(`documentId`) REFERENCES `pdf_documents`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
             "columnName": "id",
             "affinity": "INTEGER",
-            "notNull": true
+            "notNull": false
           },
           {
             "fieldPath": "documentId",
@@ -77,26 +77,26 @@
             "notNull": true
           },
           {
-            "fieldPath": "x",
-            "columnName": "x",
+            "fieldPath": "xPercent",
+            "columnName": "xPercent",
             "affinity": "REAL",
             "notNull": true
           },
           {
-            "fieldPath": "y",
-            "columnName": "y",
+            "fieldPath": "yPercent",
+            "columnName": "yPercent",
             "affinity": "REAL",
             "notNull": true
           },
           {
-            "fieldPath": "width",
-            "columnName": "width",
+            "fieldPath": "widthPercent",
+            "columnName": "widthPercent",
             "affinity": "REAL",
             "notNull": true
           },
           {
-            "fieldPath": "height",
-            "columnName": "height",
+            "fieldPath": "heightPercent",
+            "columnName": "heightPercent",
             "affinity": "REAL",
             "notNull": true
           },
@@ -142,7 +142,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '088bccc5509f907eba902d0c42709191')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'cd9632206512abb5247fbbaa16b4491e')"
     ]
   }
 }
