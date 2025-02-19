@@ -3,6 +3,7 @@ package com.pdfsignature.ui.screens
 import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
@@ -12,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pdfsignature.core.repository.SignatureNotation
 import com.pdfsignature.core.viewer.PdfNotation
 
@@ -21,6 +23,7 @@ import com.pdfsignature.ui.viewmodels.CurrentDocumentViewModel
 
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
+import org.koin.core.parameter.parametersOf
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,9 +39,9 @@ fun CurrentDocumentScreen(
     var currentPage by remember { mutableIntStateOf(0) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var deleteCoordinates by remember { mutableStateOf<Triple<Int, Float, Float>?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var currentNotation: SignatureNotation? by remember { mutableStateOf(null) }
-
 
     // Обработка события шаринга
     LaunchedEffect(Unit) {
@@ -59,16 +62,35 @@ fun CurrentDocumentScreen(
         }
     }
 
+    // Показываем Snackbar при появлении ошибки
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { error ->
+            snackbarHostState.showSnackbar(
+                message = error,
+                duration = SnackbarDuration.Long
+            )
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Текущий документ") },
+                title = { Text("Документ") },/*Текущий документ*/
                 actions = {
-
+                    // Кнопка Reset
+                    IconButton(
+                        onClick = { viewModel.resetSignatures() }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Сбросить подписи",
+                            //tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    // Кнопка настроек
                     IconButton(onClick = onSettingsClick) {
                         Icon(Icons.Default.Settings, contentDescription = "Настройки")
                     }
-
 
                     // Кнопка сохранения PDF с подписями
                     IconButton(
@@ -90,6 +112,9 @@ fun CurrentDocumentScreen(
                     }
                 }
             )
+        },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
         }
     ) { paddingValues ->
         Box(

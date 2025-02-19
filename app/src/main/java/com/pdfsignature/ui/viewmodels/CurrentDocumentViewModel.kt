@@ -184,6 +184,18 @@ class CurrentDocumentViewModel(
                 val document = currentState.currentDocument
                 val file = currentState.pdfFile
 
+                // Проверяем, есть ли нотации без подписей
+                val notationsWithoutSignature = currentState.notations.filter { it.signatureBitmap == null }
+                if (notationsWithoutSignature.isNotEmpty()) {
+                    _uiState.update { 
+                        it.copy(
+                            isLoading = false,
+                            error = "Есть неподписанные места (${notationsWithoutSignature.size} шт.). Пожалуйста, поставьте все подписи!"
+                        )
+                    }
+                    return@launch
+                }
+
                 if (document != null && file != null) {
                     println("DEBUG: ViewModel: Создаем PDF с подписями для шаринга")
                     // Создаем новый PDF с подписями
@@ -215,6 +227,18 @@ class CurrentDocumentViewModel(
                 val document = currentState.currentDocument
                 val file = currentState.pdfFile
 
+                // Проверяем, есть ли нотации без подписей
+                val notationsWithoutSignature = currentState.notations.filter { it.signatureBitmap == null }
+                if (notationsWithoutSignature.isNotEmpty()) {
+                    _uiState.update { 
+                        it.copy(
+                            isLoading = false,
+                            error = "Есть неподписанные места (${notationsWithoutSignature.size} шт.). Пожалуйста, поставьте все подписи!"
+                        )
+                    }
+                    return@launch
+                }
+
                 if (document != null && file != null) {
                     println("DEBUG: ViewModel: Создаем PDF с подписями")
                     // Создаем новый PDF с подписями
@@ -238,6 +262,23 @@ class CurrentDocumentViewModel(
                         error = "Ошибка при создании PDF: ${e.message}"
                     )
                 }
+            }
+        }
+    }
+
+    fun resetSignatures() {
+        viewModelScope.launch {
+            try {
+                // Получаем текущий документ
+                val document = repository.getAllDocuments().first().firstOrNull()
+                document?.let { doc ->
+                    // Сбрасываем подписи
+                    repository.resetSignatures(doc.id)
+                    // Обновляем UI
+                    loadNotations(doc.id)
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message) }
             }
         }
     }

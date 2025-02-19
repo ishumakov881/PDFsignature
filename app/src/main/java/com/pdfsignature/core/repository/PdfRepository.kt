@@ -34,6 +34,7 @@ interface PdfRepository {
         notations: List<SignatureNotation>
     ): File
     suspend fun getSignedDocumentFile(fileName: String): File
+    suspend fun resetSignatures(documentId: String)
 }
 
 data class PdfDocument(

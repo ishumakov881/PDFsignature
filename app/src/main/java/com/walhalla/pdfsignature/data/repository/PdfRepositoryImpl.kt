@@ -431,4 +431,11 @@ class PdfRepositoryImpl(
         y = yPercent,
         signatureBitmap = signatureBitmaps["${documentId}_${page}_${xPercent}_${yPercent}"]
     )
+
+    override suspend fun resetSignatures(documentId: String) {
+        // Очищаем все битмапы для данного документа из кэша
+        signatureBitmaps.entries.removeIf { (key, _) -> 
+            key.startsWith("${documentId}_")
+        }
+    }
 } 
