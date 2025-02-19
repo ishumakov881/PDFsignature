@@ -7,7 +7,7 @@ import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
 val appModule = module {
-
+    single { AppPreferences(androidContext()) }
 
     // ViewModels
     factory { CurrentDocumentViewModel(get()) }
@@ -15,4 +15,5 @@ val appModule = module {
     factory { DocumentListViewModel(get()) }
     factory { NotationEditorViewModel(get()) }
     factory { SettingsViewModel(get()) }
+    factory { HistoryPdfViewerViewModel(get()) }
 } 

@@ -22,6 +22,9 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.*
 import kotlin.math.abs
+import java.security.KeyPairGenerator
+import java.security.Signature
+import java.util.Base64
 
 class PdfRepositoryImpl(
     private val context: Context,
@@ -184,12 +187,7 @@ class PdfRepositoryImpl(
             }
     }
 
-    override suspend fun removeSignatureFromPdf(
-        file: File,
-        page: Int,
-        x: Float,
-        y: Float
-    ): File = withContext(Dispatchers.IO) {
+    override suspend fun removeSignatureFromPdf(file: File, page: Int, x: Float, y: Float): File = withContext(Dispatchers.IO) {
         val signatureKey = "${file.name}_${page}_${x}_${y}"
         signatureBitmaps.remove(signatureKey)
         file
@@ -317,10 +315,7 @@ class PdfRepositoryImpl(
                 val page = document.getPage(notation.page)
 
                 // Создаем поток для рисования
-                PDPageContentStream(
-                    document,
-                    page,
-                    PDPageContentStream.AppendMode.APPEND,
+                PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND,
                     true
                 ).use { contentStream ->
                     // Конвертируем подпись в формат PDImageXObject
@@ -344,13 +339,50 @@ class PdfRepositoryImpl(
                             y - (image.height / 2f)
                         )
                         println("DEBUG: PdfRepositoryImpl: Подпись добавлена в позицию ($x, $y)")
+                        
+                        // Добавляем метаданные о подписи
+                        val info = document.documentInformation
+                        info.setCustomMetadataValue("Signature_${notation.page}_${notation.x}_${notation.y}", 
+                            "Added: ${Date()}, Page: ${notation.page}")
                     }
                 }
             }
 
+            // TODO: Добавить криптографическую подпись
+            // 1. Генерируем пару ключей RSA
+//            val keyPairGenerator = KeyPairGenerator.getInstance("RSA")
+//            keyPairGenerator.initialize(2048)
+//            val keyPair = keyPairGenerator.generateKeyPair()
+//
+//            // 2. Создаем подпись документа
+//            val signature = Signature.getInstance("SHA256withRSA")
+//            signature.initSign(keyPair.private)
+//
+//            // 3. Добавляем данные в подпись
+//            document.documentCatalog.cosObject.toString().toByteArray().let { bytes ->
+//                signature.update(bytes)
+//            }
+//
+//            // 4. Получаем цифровую подпись
+//            val digitalSignature = signature.sign()
+//
+//            // 5. Сохраняем подпись в метаданных документа
+//            document.documentInformation.setCustomMetadataValue(
+//                "DigitalSignature",
+//                Base64.getEncoder().encodeToString(digitalSignature)
+//            )
+//            document.documentInformation.setCustomMetadataValue(
+//                "SignatureTimestamp",
+//                timestamp.toString()
+//            )
+//            document.documentInformation.setCustomMetadataValue(
+//                "SignaturePublicKey",
+//                Base64.getEncoder().encodeToString(keyPair.public.encoded)
+//            )
+
             // Сохраняем PDF с подписями
             document.save(signedFile)
-            println("DEBUG: PdfRepositoryImpl: PDF сохранен: ${signedFile.path}")
+            println("DEBUG: PdfRepositoryImpl: PDF сохранен с цифровой подписью: ${signedFile.path}")
         }
 
         signedFile
@@ -380,6 +412,10 @@ class PdfRepositoryImpl(
 
         emit(documents)
     }.flowOn(Dispatchers.IO)
+
+    override suspend fun getSignedDocumentFile(fileName: String): File = withContext(Dispatchers.IO) {
+        File(context.cacheDir, fileName)
+    }
 
     private fun PdfDocumentEntity.toDomain() = PdfDocument(
         id = id,

@@ -31,19 +31,59 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.pdfsignature.core.viewer.PdfNotation
 import com.pdfsignature.core.viewer.PdfViewer
+import com.pdfsignature.data.preferences.AppPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.koin.compose.koinInject
 import java.io.File
 
 class PdfViewerImpl : PdfViewer {
 
+    private fun drawMarkerCross(canvas: Canvas, centerX: Float, centerY: Float, radius: Float) {
+        val size = radius * 5 // Уменьшаем размер крестика в 2 раза
+        
+        // Рисуем красный крестик
+        val paint = Paint().apply {
+            color = Color.RED
+            alpha = 180
+            style = Paint.Style.STROKE
+            strokeWidth = radius * 0.5f // Делаем линии тоньше
+            isAntiAlias = true
+        }
+        
+        // Рисуем линии крестика
+        canvas.drawLine(
+            centerX - size/2, centerY,
+            centerX + size/2, centerY,
+            paint
+        )
+        canvas.drawLine(
+            centerX, centerY - size/2,
+            centerX, centerY + size/2,
+            paint
+        )
+        
+        // Рисуем белую обводку
+        paint.apply {
+            color = Color.WHITE
+            alpha = 255
+            strokeWidth = radius * 0.2f
+        }
+        
+        canvas.drawLine(
+            centerX - size/2, centerY,
+            centerX + size/2, centerY,
+            paint
+        )
+        canvas.drawLine(
+            centerX, centerY - size/2,
+            centerX, centerY + size/2,
+            paint
+        )
+    }
 
-    private fun drawMarker(canvas: Canvas, centerX: Float, centerY: Float, radius: Float) {
-
-
-        //Render
+    private fun drawMarkerRectangle(canvas: Canvas, centerX: Float, centerY: Float, radius: Float) {
         val point = radius * 10 / 12
-
         val width = point * 12
         val height = point * 9
         val left = centerX - width / 2
@@ -51,11 +91,12 @@ class PdfViewerImpl : PdfViewer {
         val right = centerX + width / 2
         val bottom = centerY + height / 2
 
-        // Рисуем красный прямоугольник
+        // Рисуем синюю рамку
         val rectPaint = Paint().apply {
-            color = Color.RED
+            color = Color.BLUE
             alpha = 180
-            style = Paint.Style.FILL
+            style = Paint.Style.STROKE // Меняем на STROKE для рисования только контура
+            strokeWidth = radius * 0.5f // Устанавливаем толщину линии
             isAntiAlias = true
         }
         canvas.drawRect(left, top, right, bottom, rectPaint)
@@ -65,32 +106,13 @@ class PdfViewerImpl : PdfViewer {
             color = Color.WHITE
             alpha = 255
             style = Paint.Style.STROKE
-            strokeWidth = 2f
+            strokeWidth = radius * 0.2f
             isAntiAlias = true
         }
         canvas.drawRect(left, top, right, bottom, strokePaint)
-//        // Если есть подпись, добавляем зеленый индикатор в центре
-//        if (hasSignature) {
-//            val indicatorPaint = Paint().apply {
-//                color = Color.GREEN
-//                alpha = 255
-//                style = Paint.Style.FILL
-//                isAntiAlias = true
-//            }
-//            canvas.drawCircle(centerX, centerY, 2.5f, indicatorPaint)
-//        }else{
-//
-//        }
     }
 
-
-    private fun drawMarkerDot(
-        canvas: Canvas,
-        centerX: Float,
-        centerY: Float,
-        radius: Float,
-        hasSignature: Boolean = false
-    ) {
+    private fun drawMarkerDot(canvas: Canvas, centerX: Float, centerY: Float, radius: Float) {
         // Рисуем красную точку
         val dotPaint = Paint().apply {
             color = Color.RED
@@ -98,27 +120,25 @@ class PdfViewerImpl : PdfViewer {
             style = Paint.Style.FILL
             isAntiAlias = true
         }
-        canvas.drawCircle(centerX, centerY, radius, dotPaint)
+        canvas.drawCircle(centerX, centerY, radius * 5, dotPaint)
 
         // Рисуем белую обводку
         val strokePaint = Paint().apply {
             color = Color.WHITE
             alpha = 255
             style = Paint.Style.STROKE
-            strokeWidth = radius * 0.2f
+            strokeWidth = radius
             isAntiAlias = true
         }
-        canvas.drawCircle(centerX, centerY, radius, strokePaint)
+        canvas.drawCircle(centerX, centerY, radius * 5, strokePaint)
+    }
 
-        // Если есть подпись, добавляем зеленый индикатор
-        if (hasSignature) {
-            val indicatorPaint = Paint().apply {
-                color = Color.GREEN
-                alpha = 255
-                style = Paint.Style.FILL
-                isAntiAlias = true
-            }
-            canvas.drawCircle(centerX, centerY, radius * 0.3f, indicatorPaint)
+    private fun drawMarker(canvas: Canvas, centerX: Float, centerY: Float, radius: Float, markerType: String) {
+        when (markerType) {
+            "RECTANGLE" -> drawMarkerRectangle(canvas, centerX, centerY, radius)
+            "DOT" -> drawMarkerDot(canvas, centerX, centerY, radius)
+            "CROSS" -> drawMarkerCross(canvas, centerX, centerY, radius)
+            else -> drawMarkerRectangle(canvas, centerX, centerY, radius) // По умолчанию
         }
     }
 
@@ -131,20 +151,15 @@ class PdfViewerImpl : PdfViewer {
         onPageChanged: ((Int) -> Unit)?
     ) {
         val context = LocalContext.current
+        val preferences: AppPreferences = koinInject()
+        val markerType by preferences.markerType.collectAsState(initial = "RECTANGLE")
+        
         var pageCount by remember { mutableIntStateOf(1) }
         var pageBitmaps by remember { mutableStateOf<Map<Int, Bitmap>>(emptyMap()) }
         var imageSize by remember { mutableStateOf(Size(0f, 0f)) }
         val listState = rememberLazyListState()
 
         var hasSignature by remember { mutableStateOf(false) }
-
-
-//        LaunchedEffect(hasSignature) {
-//            Toast.makeText(context, "Signature: $hasSignature", Toast.LENGTH_SHORT).show()
-//            println("DEBUG: hasSignature изменился: $hasSignature")
-//            // Выполни нужное действие при изменении hasSignature
-//        }
-
 
         // Загружаем и обновляем страницы PDF при изменении нотаций
         LaunchedEffect(file, notations) {
@@ -189,16 +204,13 @@ class PdfViewerImpl : PdfViewer {
                                 // Рисуем маркер
                                 hasSignature = notation.signatureBitmap != null
 
-//                                withContext(Dispatchers.Main){
-//                                    Toast.makeText(context, "hs: $hasSignature", Toast.LENGTH_SHORT).show()
-//                                }
-
                                 if (!hasSignature) {
                                     drawMarker(
                                         canvas = canvas,
                                         centerX = centerX,
                                         centerY = centerY,
-                                        radius = radius
+                                        radius = radius,
+                                        markerType = markerType
                                     )
                                 }
                                 // Если есть подпись, рисуем её поверх

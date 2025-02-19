@@ -33,6 +33,7 @@ interface PdfRepository {
         file: File,
         notations: List<SignatureNotation>
     ): File
+    suspend fun getSignedDocumentFile(fileName: String): File
 }
 
 data class PdfDocument(

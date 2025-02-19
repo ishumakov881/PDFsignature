@@ -11,10 +11,14 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
 import androidx.navigation.compose.*
+import androidx.navigation.navArgument
+
 import com.pdfsignature.data.preferences.AppPreferences
 import com.pdfsignature.ui.navigation.Screen
 import com.pdfsignature.ui.screens.*
+import com.walhalla.pdfsignature.ui.screens.HistoryPdfViewerScreen
 import com.walhalla.pdfsignature.ui.theme.PDFsignatureTheme
 import org.koin.android.ext.android.inject
 
@@ -118,6 +122,16 @@ fun MainScreen() {
             }
             composable(Screen.Settings.route) {
                 SettingsScreen()
+            }
+            composable(
+                route = Screen.HistoryViewer.route,
+                arguments = listOf(navArgument("documentId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val documentId = backStackEntry.arguments?.getString("documentId") ?: return@composable
+                HistoryPdfViewerScreen(
+                    documentId = documentId,
+                    navController = navController
+                )
             }
         }
     }
