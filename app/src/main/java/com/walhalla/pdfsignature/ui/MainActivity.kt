@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,16 +39,16 @@ fun MainScreen() {
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("PDF Signature") },
-                actions = {
-                    IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
-                        Icon(Icons.Default.Settings, contentDescription = "Настройки")
-                    }
-                }
-            )
-        },
+//        topBar = {
+//            TopAppBar(
+//                title = { Text("PDF Signature") },
+//                actions = {
+//                    IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
+//                        Icon(Icons.Default.Settings, contentDescription = "Настройки")
+//                    }
+//                }
+//            )
+//        },
         bottomBar = {
             NavigationBar {
                 Screen.bottomNavItems.forEach { screen ->
@@ -68,7 +69,7 @@ fun MainScreen() {
                                     contentDescription = "Current Document"
                                 )
                                 Screen.DocumentList -> Icon(
-                                    Icons.Default.List,
+                                    Icons.AutoMirrored.Filled.List,
                                     contentDescription = "Document List"
                                 )
                                 Screen.NotationEditor -> Icon(
@@ -104,7 +105,7 @@ fun MainScreen() {
             modifier = Modifier.padding(paddingValues)
         ) {
             composable(Screen.CurrentDocument.route) {
-                CurrentDocumentScreen()
+                CurrentDocumentScreen(onSettingsClick = { navController.navigate(Screen.Settings.route) })
             }
             composable(Screen.DocumentList.route) {
                 DocumentListScreen(navController = navController)

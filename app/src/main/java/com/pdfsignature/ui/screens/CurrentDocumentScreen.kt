@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,7 +26,8 @@ import org.koin.compose.koinInject
 @Composable
 fun CurrentDocumentScreen(
     viewModel: CurrentDocumentViewModel = koinViewModel(),
-    pdfViewer: PdfViewer = koinInject()
+    pdfViewer: PdfViewer = koinInject(),
+    onSettingsClick: () -> Unit
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -37,7 +39,7 @@ fun CurrentDocumentScreen(
 
     var currentNotation: SignatureNotation? by remember { mutableStateOf(null) }
 
-    
+
     // Обработка события шаринга
     LaunchedEffect(Unit) {
         viewModel.shareEvent.collect { file ->
@@ -46,22 +48,28 @@ fun CurrentDocumentScreen(
                 "${context.packageName}.provider",
                 file
             )
-            
+
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "application/pdf"
                 putExtra(Intent.EXTRA_STREAM, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            
+
             context.startActivity(Intent.createChooser(intent, "Поделиться PDF"))
         }
     }
-    
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Текущий документ") },
                 actions = {
+
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Default.Settings, contentDescription = "Настройки")
+                    }
+
+
                     // Кнопка сохранения PDF с подписями
                     IconButton(
                         onClick = { viewModel.savePdfWithSignatures() }
@@ -95,12 +103,14 @@ fun CurrentDocumentScreen(
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
+
                 uiState.currentDocument == null -> {
                     Text(
                         text = "Нет выбранного документа",
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
+
                 else -> {
                     uiState.pdfFile?.let { file ->
                         pdfViewer.DisplayPdf(
@@ -108,20 +118,20 @@ fun CurrentDocumentScreen(
                             onPageClick = { page, x, y, bitmap ->
                                 println("DEBUG: Клик по странице $page в точке ($x, $y)")
                                 println("DEBUG: Существующая подпись: ${bitmap != null}")
-                                
+
                                 // Проверяем, есть ли нотация в этой точке
                                 val notation = uiState.notations.find { notation ->
-                                    notation.page == page && 
-                                    kotlin.math.abs(notation.x - x) < 5 && // Допуск в 5%
-                                    kotlin.math.abs(notation.y - y) < 5     // Допуск в 5%
+                                    notation.page == page &&
+                                            kotlin.math.abs(notation.x - x) < 5 && // Допуск в 5%
+                                            kotlin.math.abs(notation.y - y) < 5     // Допуск в 5%
                                 }
-                                
+
                                 if (notation != null) {
                                     // Если есть нотация и подпись - показываем диалог удаления
                                     if (bitmap != null) {
                                         deleteCoordinates = Triple(page, x, y)
                                         showDeleteDialog = true
-                                    } 
+                                    }
                                     // Если есть нотация, но нет подписи - показываем диалог подписи
                                     else {
 
@@ -152,7 +162,7 @@ fun CurrentDocumentScreen(
             }
         }
     }
-    
+
     if (showSignaturePad) {
         SignaturePadDialog(
             onSignatureComplete = { bitmap ->
@@ -172,8 +182,8 @@ fun CurrentDocumentScreen(
 
     if (showDeleteDialog) {
         AlertDialog(
-            onDismissRequest = { 
-                showDeleteDialog = false 
+            onDismissRequest = {
+                showDeleteDialog = false
                 deleteCoordinates = null
             },
             title = { Text("Удалить подпись?") },
@@ -193,7 +203,7 @@ fun CurrentDocumentScreen(
             },
             dismissButton = {
                 TextButton(
-                    onClick = { 
+                    onClick = {
                         showDeleteDialog = false
                         deleteCoordinates = null
                     }

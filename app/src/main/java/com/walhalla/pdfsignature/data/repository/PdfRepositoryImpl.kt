@@ -74,10 +74,7 @@ class PdfRepositoryImpl(
     }
 
 
-    suspend fun savePdfWithSignature1(
-        file: File,
-        signature: Bitmap,
-        notation: SignatureNotation
+    suspend fun savePdfWithSignature1(file: File, signature: Bitmap, notation: SignatureNotation
     ): File = withContext(Dispatchers.IO) {
         println("DEBUG: PdfRepositoryImpl: Сохраняем подпись для файла ${file.name}")
         println("DEBUG: PdfRepositoryImpl: Размер подписи ${signature.width}x${signature.height}")
@@ -89,21 +86,19 @@ class PdfRepositoryImpl(
         //@@@@@@@@@@@@@@
         //@@@@@@@@@@@@@@
         // Сохраняем нотацию
-        val notation = SignatureNotationEntity(
-            documentId = notation.documentId, page = notation.page,
-            xPercent = notation.x,
-            yPercent = notation.y,
-            widthPercent = 20f, heightPercent = 10f
-        )
-        val inserted = signatureNotationDao.insertNotation(notation)
-        notation.id = inserted
-        println("DEBUG: PdfRepositoryImpl: Создана нотация: ${notation}")
-        //pdfDocumentDao.updateHasNotations(documentId, true)
-
-        println("DEBUG: PdfRepositoryImpl: Нотация сохранена в базу данных")
-        println("DEBUG: PdfRepositoryImpl: Нотация сохранена")
+//        val notation = SignatureNotationEntity(
+//            documentId = notation.documentId, page = notation.page,
+//            xPercent = notation.x,
+//            yPercent = notation.y,
+//            widthPercent = 20f, heightPercent = 10f
+//        )
+//        val inserted = signatureNotationDao.insertNotation(notation)
+//        notation.id = inserted
+//        println("xxx DEBUG: PdfRepositoryImpl: Создана нотация: ${notation}")
+        pdfDocumentDao.updateHasNotations(notation.documentId, true)/*UI Trigger*/
         file
     }
+
 
 
 
@@ -362,6 +357,10 @@ class PdfRepositoryImpl(
     }
 
     override suspend fun getSignedDocuments(): Flow<List<PdfDocument>> = flow {
+
+
+        println("@@@ ${context.cacheDir}")
+
         val signedFiles = context.cacheDir.listFiles { file ->
             file.name.startsWith("signed_") && file.name.endsWith(".pdf")
         }?.toList() ?: emptyList()

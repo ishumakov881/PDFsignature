@@ -85,7 +85,7 @@ class CurrentDocumentViewModel(
             try {
                 println("DEBUG: ViewModel: Добавляем подпись на странице $page в точке ($x, $y)")
                 val currentState = _uiState.value
-                val document = currentState.currentDocument
+
                 val file = currentState.pdfFile
 
 

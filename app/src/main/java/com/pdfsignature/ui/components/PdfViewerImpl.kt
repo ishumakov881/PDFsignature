@@ -131,12 +131,20 @@ class PdfViewerImpl : PdfViewer {
         onPageChanged: ((Int) -> Unit)?
     ) {
         val context = LocalContext.current
-        var pageCount by remember { mutableStateOf(1) }
+        var pageCount by remember { mutableIntStateOf(1) }
         var pageBitmaps by remember { mutableStateOf<Map<Int, Bitmap>>(emptyMap()) }
         var imageSize by remember { mutableStateOf(Size(0f, 0f)) }
         val listState = rememberLazyListState()
 
         var hasSignature by remember { mutableStateOf(false) }
+
+
+//        LaunchedEffect(hasSignature) {
+//            Toast.makeText(context, "Signature: $hasSignature", Toast.LENGTH_SHORT).show()
+//            println("DEBUG: hasSignature изменился: $hasSignature")
+//            // Выполни нужное действие при изменении hasSignature
+//        }
+
 
         // Загружаем и обновляем страницы PDF при изменении нотаций
         LaunchedEffect(file, notations) {
@@ -156,9 +164,7 @@ class PdfViewerImpl : PdfViewer {
                             page.height * scale,
                             Bitmap.Config.ARGB_8888
                         )
-
-                        page.render(
-                            bitmap,
+                        page.render(bitmap,
                             null,
                             null,
                             PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY
@@ -183,9 +189,9 @@ class PdfViewerImpl : PdfViewer {
                                 // Рисуем маркер
                                 hasSignature = notation.signatureBitmap != null
 
-                                withContext(Dispatchers.Main){
-                                    Toast.makeText(context, "hs: $hasSignature", Toast.LENGTH_SHORT).show()
-                                }
+//                                withContext(Dispatchers.Main){
+//                                    Toast.makeText(context, "hs: $hasSignature", Toast.LENGTH_SHORT).show()
+//                                }
 
                                 if (!hasSignature) {
                                     drawMarker(
