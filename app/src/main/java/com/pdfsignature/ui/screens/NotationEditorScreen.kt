@@ -23,7 +23,7 @@ fun NotationEditorScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var clickedCoordinates by remember { mutableStateOf<Triple<Int, Float, Float>?>(null) }
     var deleteCoordinates by remember { mutableStateOf<Triple<Int, Float, Float>?>(null) }
-    var currentPage by remember { mutableStateOf(0) }
+    var currentPage by remember { mutableIntStateOf(0) }
     var draggedNotation by remember { mutableStateOf<PdfNotation?>(null) }
     
     Box(modifier = Modifier.fillMaxSize()) {
@@ -47,7 +47,8 @@ fun NotationEditorScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "Нажмите в любом месте документа для добавления области подписи\nПеретащите маркер для изменения его положения\nНажмите на маркер для его удаления",
+                            text = "Нажмите в любом месте документа для добавления области подписи"
+                                    /*"\nПеретащите маркер для изменения его положения\nНажмите на маркер для его удаления"*/,
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(16.dp)
                         )

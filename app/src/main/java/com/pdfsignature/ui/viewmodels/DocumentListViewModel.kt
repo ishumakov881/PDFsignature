@@ -6,12 +6,14 @@ import com.pdfsignature.core.repository.PdfDocument
 import com.pdfsignature.core.repository.PdfRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.*
 
 data class DocumentListState(
     val isLoading: Boolean = false,
     val documents: List<PdfDocument> = emptyList(),
-    val error: String? = null
+    val error: String? = null,
+    val searchQuery: String = ""
 )
 
 class DocumentListViewModel(
@@ -24,8 +26,18 @@ class DocumentListViewModel(
     private val _importPdfEvent = MutableSharedFlow<Unit>()
     val importPdfEvent = _importPdfEvent.asSharedFlow()
 
+    private val _selectedDocument = MutableStateFlow<PdfDocument?>(null)
+    val selectedDocument = _selectedDocument.asStateFlow()
+
     init {
         loadDocuments()
+    }
+
+    fun setSearchQuery(query: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(searchQuery = query) }
+            loadDocuments()
+        }
     }
 
     private fun loadDocuments() {
@@ -34,10 +46,17 @@ class DocumentListViewModel(
             try {
                 repository.getAllDocuments()
                     .collect { documents ->
+                        val filteredDocuments = if (_uiState.value.searchQuery.isNotEmpty()) {
+                            documents.filter { doc ->
+                                doc.title.contains(_uiState.value.searchQuery, ignoreCase = true)
+                            }
+                        } else {
+                            documents
+                        }
                         _uiState.update { 
                             it.copy(
                                 isLoading = false,
-                                documents = documents
+                                documents = filteredDocuments
                             )
                         }
                     }
@@ -63,15 +82,24 @@ class DocumentListViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val file = repository.getPdfFromLocal(uri)
+                // Создаем документ с путем к локальной копии
                 val document = PdfDocument(
                     id = UUID.randomUUID().toString(),
                     title = fileName,
                     addedDate = System.currentTimeMillis(),
-                    path = file.path
+                    path = uri // URI будет обработан в репозитории
                 )
+                
+                // Сохраняем информацию о документе
                 repository.saveDocument(document)
-                _uiState.update { it.copy(isLoading = false) }
+                
+                // Автоматически выбираем новый документ
+                onDocumentSelected(document)
+                
+                _uiState.update { it.copy(
+                    isLoading = false,
+                    error = "Документ успешно импортирован"
+                ) }
             } catch (e: Exception) {
                 _uiState.update { 
                     it.copy(
@@ -85,14 +113,25 @@ class DocumentListViewModel(
 
     fun onDocumentSelected(document: PdfDocument) {
         viewModelScope.launch {
+            _selectedDocument.emit(document)
+        }
+    }
+
+    fun deleteDocument(document: PdfDocument) {
+        viewModelScope.launch {
             try {
-                // Обновляем время последнего просмотра в базе данных
-                repository.getPdfFromAssets("sample.pdf") // Загружаем файл для кэширования
+                // Удаляем документ через репозиторий
+                repository.deleteDocument0(document)
+                // Обновляем список
+                loadDocuments()
+                _uiState.update { it.copy(error = "Документ удален") }
             } catch (e: Exception) {
-                _uiState.update { 
-                    it.copy(error = e.message)
-                }
+                _uiState.update { it.copy(error = "Ошибка при удалении: ${e.message}") }
             }
         }
+    }
+
+    fun setSelectedDocument(document: PdfDocument) {
+        _selectedDocument.value = document
     }
 } 

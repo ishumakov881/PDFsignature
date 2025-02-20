@@ -1,6 +1,7 @@
 package com.pdfsignature.core.repository
 
 import android.graphics.Bitmap
+import com.pdfsignature.data.db.entity.PdfDocumentEntity
 import java.io.File
 import kotlinx.coroutines.flow.Flow
 
@@ -35,6 +36,10 @@ interface PdfRepository {
     ): File
     suspend fun getSignedDocumentFile(fileName: String): File
     suspend fun resetSignatures(documentId: String)
+
+    suspend fun deleteDocument0(document: PdfDocument)
+
+    suspend fun deleteSignedDocument(documentId: String)
 }
 
 data class PdfDocument(

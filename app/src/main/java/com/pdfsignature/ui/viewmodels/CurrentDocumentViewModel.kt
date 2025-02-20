@@ -1,6 +1,7 @@
 package com.pdfsignature.ui.viewmodels
 
 import android.graphics.Bitmap
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pdfsignature.core.repository.PdfDocument
@@ -33,6 +34,35 @@ class CurrentDocumentViewModel(
         loadLastDocument()
     }
 
+    fun loadDocument(document: PdfDocument) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                // Получаем файл из локального хранилища
+                val file = File(document.path)
+                if (!file.exists()) {
+                    throw Exception("Файл не найден")
+                }
+                
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        currentDocument = document,
+                        pdfFile = file
+                    )
+                }
+                loadNotations(document.id)
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = e.message
+                    )
+                }
+            }
+        }
+    }
+
     private fun loadLastDocument() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -41,15 +71,7 @@ class CurrentDocumentViewModel(
                     .map { documents -> documents.firstOrNull() }
                     .collect { document ->
                         if (document != null) {
-                            val file = repository.getPdfFromAssets("sample.pdf")
-                            _uiState.update {
-                                it.copy(
-                                    isLoading = false,
-                                    currentDocument = document,
-                                    pdfFile = file
-                                )
-                            }
-                            loadNotations(document.id)
+                            loadDocument(document)
                         } else {
                             _uiState.update {
                                 it.copy(
@@ -87,15 +109,11 @@ class CurrentDocumentViewModel(
                 val currentState = _uiState.value
 
                 val file = currentState.pdfFile
-
-
                 val notation: SignatureNotation? = _uiState.value.notations.find { notation ->
                     notation.page == page &&
                             kotlin.math.abs(notation.x - x) < 5 && // Допуск в 5%
                             kotlin.math.abs(notation.y - y) < 5     // Допуск в 5%
                 }
-
-                //notation.
 
                 if (notation != null && file != null) {
                     val signedFile = (repository as PdfRepositoryImpl).savePdfWithSignature1(file, signature, notation)
@@ -117,35 +135,6 @@ class CurrentDocumentViewModel(
                 }
             }
         }
-
-
-//        viewModelScope.launch {
-//            _uiState.update { it.copy(isLoading = true) }
-//            try {
-//                println("DEBUG: ViewModel: Добавляем подпись на странице $page в точке ($x, $y)")
-//                val currentState = _uiState.value
-//                val document = currentState.currentDocument
-//                val file = currentState.pdfFile
-//                if (document != null && file != null) {
-//                    val signedFile = repository.savePdfWithSignature(file, signature, page, x, y)
-//                    println("DEBUG: ViewModel: Подпись добавлена, обновляем UI")
-//                    _uiState.update {
-//                        it.copy(
-//                            isLoading = false,
-//                            pdfFile = signedFile
-//                        )
-//                    }
-//                }
-//            } catch (e: Exception) {
-//                println("DEBUG: ViewModel: Ошибка при добавлении подписи: ${e.message}")
-//                _uiState.update {
-//                    it.copy(
-//                        isLoading = false,
-//                        error = e.message
-//                    )
-//                }
-//            }
-//        }
     }
 
     fun removeSignature(page: Int, x: Float, y: Float) {
@@ -157,11 +146,11 @@ class CurrentDocumentViewModel(
                 val file = currentState.pdfFile
 
                 if (document != null && file != null) {
-                    val updatedFile = repository.removeSignatureFromPdf(file, page, x, y)
+                    repository.deleteNotation(document.id, page, x, y)
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            pdfFile = updatedFile
+                            pdfFile = file
                         )
                     }
                 }

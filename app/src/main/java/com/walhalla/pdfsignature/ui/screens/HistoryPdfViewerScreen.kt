@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import android.content.Intent
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.navigation.NavController
 import com.pdfsignature.core.viewer.PdfViewer
 import com.pdfsignature.ui.viewmodels.HistoryPdfViewerViewModel
@@ -38,7 +39,7 @@ fun HistoryPdfViewerScreen(
         TopAppBar(
             navigationIcon = {
                 IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
                 }
             },
             title = { Text(uiState.title.ifEmpty { "Просмотр документа" }) },

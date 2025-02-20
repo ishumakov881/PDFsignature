@@ -72,18 +72,22 @@ fun MainScreen() {
                                     Icons.AutoMirrored.Filled.InsertDriveFile,
                                     contentDescription = "Current Document"
                                 )
+
                                 Screen.DocumentList -> Icon(
                                     Icons.AutoMirrored.Filled.List,
                                     contentDescription = "Document List"
                                 )
+
                                 Screen.NotationEditor -> Icon(
                                     Icons.Default.Edit,
                                     contentDescription = "Editor"
                                 )
+
                                 Screen.SignedDocuments -> Icon(
                                     Icons.Default.History,
                                     contentDescription = "History"
                                 )
+
                                 else -> {}
                             }
                         },
@@ -105,7 +109,7 @@ fun MainScreen() {
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = Screen.CurrentDocument.route,
+            startDestination = Screen.DocumentList.route,
             modifier = Modifier.padding(paddingValues)
         ) {
             composable(Screen.CurrentDocument.route) {
@@ -132,6 +136,22 @@ fun MainScreen() {
                     documentId = documentId,
                     navController = navController
                 )
+            }
+            composable(
+                route = Screen.DocumentViewer.route,
+                arguments = listOf(navArgument("documentId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val documentId = backStackEntry.arguments?.getString("documentId") ?: return@composable
+                CurrentDocumentScreen(
+                    onSettingsClick = { navController.navigate(Screen.Settings.route) }
+                )
+            }
+            composable(
+                route = Screen.DocumentEditor.route,
+                arguments = listOf(navArgument("documentId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val documentId = backStackEntry.arguments?.getString("documentId") ?: return@composable
+                NotationEditorScreen()
             }
         }
     }

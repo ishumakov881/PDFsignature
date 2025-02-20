@@ -1,6 +1,11 @@
 package com.pdfsignature.ui.screens
 
+import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
@@ -14,25 +19,52 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionStatus
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
 import com.pdfsignature.core.repository.SignatureNotation
 import com.pdfsignature.core.viewer.PdfNotation
 
 import com.pdfsignature.core.viewer.PdfViewer
 import com.pdfsignature.ui.components.SignaturePadDialog
 import com.pdfsignature.ui.viewmodels.CurrentDocumentViewModel
+import com.pdfsignature.ui.viewmodels.DocumentListViewModel
 
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun CurrentDocumentScreen(
     viewModel: CurrentDocumentViewModel = koinViewModel(),
+    documentListViewModel: DocumentListViewModel = koinViewModel(),
     pdfViewer: PdfViewer = koinInject(),
     onSettingsClick: () -> Unit
 ) {
+
+
+//    var perm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+////        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+////            android.Manifest.permission.MANAGE_EXTERNAL_STORAGE
+////        } else {
+////            TODO("VERSION.SDK_INT < R")
+////        }
+//    } else {
+//        android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+//    }
+
+
+    val permissionState =
+        rememberPermissionState(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+    //ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED -> {
+
+    var showSettingsDialog by remember { mutableStateOf(false) }
+
     val context = LocalContext.current
+
     val uiState by viewModel.uiState.collectAsState()
     var showSignaturePad by remember { mutableStateOf(false) }
     var selectedNotationTriple by remember { mutableStateOf<Triple<Int, Float, Float>?>(null) }
@@ -42,6 +74,15 @@ fun CurrentDocumentScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     var currentNotation: SignatureNotation? by remember { mutableStateOf(null) }
+
+    // Следим за выбранным документом
+    LaunchedEffect(Unit) {
+        documentListViewModel.selectedDocument.collect { document ->
+            document?.let {
+                viewModel.loadDocument(it)
+            }
+        }
+    }
 
     // Обработка события шаринга
     LaunchedEffect(Unit) {
@@ -94,7 +135,28 @@ fun CurrentDocumentScreen(
 
                     // Кнопка сохранения PDF с подписями
                     IconButton(
-                        onClick = { viewModel.savePdfWithSignatures() }
+                        onClick = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                viewModel.savePdfWithSignatures()
+                            } else {
+                                when {
+                                    permissionState.status.isGranted -> {
+                                        viewModel.savePdfWithSignatures()
+                                    }
+
+                                    permissionState.status.shouldShowRationale -> {
+                                        showSettingsDialog = true
+                                    }
+
+                                    else -> {
+                                        permissionState.launchPermissionRequest()
+                                        println("Разрешение не предоставлено.")
+                                    }
+                                }
+                                //Toast.makeText(context, "@@@@ ${permissionState.status.isGranted}", Toast.LENGTH_SHORT).show()
+
+                            }
+                        }
                     ) {
                         Icon(
                             imageVector = Icons.Default.Save,
@@ -103,7 +165,31 @@ fun CurrentDocumentScreen(
                     }
                     // Кнопка шаринга
                     IconButton(
-                        onClick = { viewModel.sharePdfWithSignatures() }
+                        onClick = {
+
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                viewModel.sharePdfWithSignatures()
+                            } else {
+                                when {
+                                    permissionState.status.isGranted -> {
+                                        viewModel.sharePdfWithSignatures()
+                                    }
+
+                                    permissionState.status.shouldShowRationale -> {
+                                        showSettingsDialog = true
+                                    }
+
+                                    else -> {
+                                        permissionState.launchPermissionRequest()
+                                        println("Разрешение не предоставлено... ${permissionState.status.isGranted}")
+                                    }
+                                }
+                            }
+
+
+                            //Toast.makeText(context, "@@@@ ${permissionState.status.isGranted}", Toast.LENGTH_SHORT).show()
+
+                        }
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,
@@ -238,4 +324,36 @@ fun CurrentDocumentScreen(
             }
         )
     }
-} 
+
+    if (showSettingsDialog) {
+        AlertDialog(
+            onDismissRequest = { showSettingsDialog = false },
+            title = { Text("Требуется разрешение") },
+            text = { Text("Чтобы сохранить PDF, предоставьте доступ к хранилищу в настройках.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSettingsDialog = false
+                    openAppSettings(context)
+                }) {
+                    Text("Открыть настройки")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSettingsDialog = false }) {
+                    Text("Отмена")
+                }
+            }
+        )
+    }
+}
+
+fun openAppSettings(context: Context) {
+    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        data = Uri.fromParts("package", context.packageName, null)
+    }
+    context.startActivity(intent)
+}
+
+@OptIn(ExperimentalPermissionsApi::class)
+fun PermissionStatus.isPermanentlyDenied(): Boolean =
+    this is PermissionStatus.Denied && !this.shouldShowRationale

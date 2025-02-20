@@ -35,15 +35,24 @@ class NotationEditorViewModel(
                     .map { documents -> documents.firstOrNull() }
                     .collect { document ->
                         if (document != null) {
-                            val file = repository.getPdfFromAssets("sample.pdf")
-                            _uiState.update { 
-                                it.copy(
-                                    isLoading = false,
-                                    currentDocument = document,
-                                    pdfFile = file
-                                )
+                            val file = File(document.path)
+                            if (file.exists()) {
+                                _uiState.update { 
+                                    it.copy(
+                                        isLoading = false,
+                                        currentDocument = document,
+                                        pdfFile = file
+                                    )
+                                }
+                                loadNotations(document.id)
+                            } else {
+                                _uiState.update { 
+                                    it.copy(
+                                        isLoading = false,
+                                        error = "Файл не найден"
+                                    )
+                                }
                             }
-                            loadNotations(document.id)
                         } else {
                             _uiState.update { 
                                 it.copy(
@@ -102,14 +111,23 @@ class NotationEditorViewModel(
                 )
             }
             try {
-                val file = repository.getPdfFromAssets("sample.pdf")
-                _uiState.update { 
-                    it.copy(
-                        isLoading = false,
-                        pdfFile = file
-                    )
+                val file = File(document.path)
+                if (file.exists()) {
+                    _uiState.update { 
+                        it.copy(
+                            isLoading = false,
+                            pdfFile = file
+                        )
+                    }
+                    loadNotations(document.id)
+                } else {
+                    _uiState.update { 
+                        it.copy(
+                            isLoading = false,
+                            error = "Файл не найден"
+                        )
+                    }
                 }
-                loadNotations(document.id)
             } catch (e: Exception) {
                 _uiState.update { 
                     it.copy(

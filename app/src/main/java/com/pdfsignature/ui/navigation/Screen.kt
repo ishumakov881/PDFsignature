@@ -6,15 +6,24 @@ sealed class Screen(val route: String, val title: String) {
     object NotationEditor : Screen("notation_editor", "Редактор")
     object SignedDocuments : Screen("signed_documents", "История")
     object Settings : Screen("settings", "Настройки")
+
     object HistoryViewer : Screen("history_viewer/{documentId}", "Просмотр документа") {
         fun createRoute(documentId: String) = "history_viewer/$documentId"
+    }
+
+    object DocumentViewer : Screen("viewer/{documentId}", "Просмотр документа") {
+        fun createRoute(documentId: String) = "viewer/$documentId"
+    }
+
+    object DocumentEditor : Screen("editor/{documentId}", "Редактирование документа") {
+        fun createRoute(documentId: String) = "editor/$documentId"
     }
     
     companion object {
         val bottomNavItems = listOf(
-            CurrentDocument,
+            //CurrentDocument,
             DocumentList,
-            NotationEditor,
+            //NotationEditor,
             SignedDocuments
         )
     }

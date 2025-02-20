@@ -20,6 +20,7 @@ import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.core.content.FileProvider
 import com.pdfsignature.ui.viewmodels.SortType
@@ -35,6 +36,8 @@ fun SignedDocumentsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var showSortMenu by remember { mutableStateOf(false) }
     var showItemMenu by remember { mutableStateOf<String?>(null) }
+    var showRenameDialog by remember { mutableStateOf<String?>(null) }
+    var newFileName by remember { mutableStateOf("") }
 
     // Обработка события шаринга
     LaunchedEffect(Unit) {
@@ -62,7 +65,50 @@ fun SignedDocumentsScreen(
             )
         }
     }
-    
+
+    // Диалог переименования
+    if (showRenameDialog != null) {
+        AlertDialog(
+            onDismissRequest = { 
+                showRenameDialog = null
+                newFileName = ""
+            },
+            title = { Text("Переименовать документ") },
+            text = {
+                OutlinedTextField(
+                    value = newFileName,
+                    onValueChange = { newFileName = it },
+                    label = { Text("Новое имя") },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showRenameDialog?.let { documentId ->
+                            viewModel.renameDocument(documentId, newFileName)
+                        }
+                        showRenameDialog = null
+                        newFileName = ""
+                    },
+                    enabled = newFileName.isNotBlank()
+                ) {
+                    Text("Переименовать")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { 
+                        showRenameDialog = null
+                        newFileName = ""
+                    }
+                ) {
+                    Text("Отмена")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -70,7 +116,7 @@ fun SignedDocumentsScreen(
                 actions = {
                     // Кнопка сортировки
                     IconButton(onClick = { showSortMenu = true }) {
-                        Icon(Icons.Default.Sort, "Сортировка")
+                        Icon(Icons.AutoMirrored.Filled.Sort, "Сортировка")
                     }
                     // Меню сортировки
                     DropdownMenu(
@@ -151,6 +197,7 @@ fun SignedDocumentsScreen(
                                     .fillMaxWidth()
                                     .padding(8.dp),
                                 onClick = {
+                                    println(document.id)
                                     navController.navigate(Screen.HistoryViewer.createRoute(document.id))
                                 }
                             ) {
@@ -195,6 +242,27 @@ fun SignedDocumentsScreen(
                                                     showItemMenu = null
                                                 }
                                             )
+//                                            DropdownMenuItem(
+//                                                text = { Text("Переименовать") },
+//                                                leadingIcon = {
+//                                                    Icon(Icons.Default.Edit, "Переименовать")
+//                                                },
+//                                                onClick = {
+//                                                    showRenameDialog = document.id
+//                                                    newFileName = document.title.removeSuffix(".pdf")
+//                                                    showItemMenu = null
+//                                                }
+//                                            )
+//                                            DropdownMenuItem(
+//                                                text = { Text("Создать копию") },
+//                                                leadingIcon = {
+//                                                    Icon(Icons.Default.ContentCopy, "Копировать")
+//                                                },
+//                                                onClick = {
+//                                                    viewModel.duplicateDocument(document.id)
+//                                                    showItemMenu = null
+//                                                }
+//                                            )
                                             DropdownMenuItem(
                                                 text = { Text("Удалить") },
                                                 leadingIcon = { 

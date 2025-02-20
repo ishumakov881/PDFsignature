@@ -28,6 +28,10 @@ class SignedDocumentsViewModel(
     private val _uiState = MutableStateFlow(SignedDocumentsState())
     val uiState: StateFlow<SignedDocumentsState> = _uiState.asStateFlow()
 
+    // Событие для шаринга
+    private val _shareEvent = MutableSharedFlow<File>()
+    val shareEvent = _shareEvent.asSharedFlow()
+
     init {
         loadDocuments()
     }
@@ -92,7 +96,6 @@ class SignedDocumentsViewModel(
         viewModelScope.launch {
             try {
                 val file = repository.getSignedDocumentFile(documentId)
-                // Эмитим событие для шаринга
                 _shareEvent.emit(file)
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Ошибка при шаринге: ${e.message}") }
@@ -100,7 +103,38 @@ class SignedDocumentsViewModel(
         }
     }
 
-    // Событие для шаринга
-    private val _shareEvent = MutableSharedFlow<File>()
-    val shareEvent = _shareEvent.asSharedFlow()
+    fun duplicateDocument(documentId: String) {
+        viewModelScope.launch {
+            try {
+                val originalFile = repository.getSignedDocumentFile(documentId)
+                val timestamp = System.currentTimeMillis()
+                val newFileName = "copy_${timestamp}_${originalFile.name}"
+                val newFile = File(originalFile.parent, newFileName)
+                
+                originalFile.copyTo(newFile, overwrite = true)
+                loadDocuments() // Обновляем список
+                _uiState.update { it.copy(error = "Документ скопирован") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Ошибка при копировании: ${e.message}") }
+            }
+        }
+    }
+
+    fun renameDocument(documentId: String, newName: String) {
+        viewModelScope.launch {
+            try {
+                val file = repository.getSignedDocumentFile(documentId)
+                val newFile = File(file.parent, "${newName}.pdf")
+                
+                if (file.renameTo(newFile)) {
+                    loadDocuments() // Обновляем список
+                    _uiState.update { it.copy(error = "Документ переименован") }
+                } else {
+                    _uiState.update { it.copy(error = "Не удалось переименовать документ") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Ошибка при переименовании: ${e.message}") }
+            }
+        }
+    }
 } 

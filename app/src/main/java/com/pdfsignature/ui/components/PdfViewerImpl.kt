@@ -163,6 +163,9 @@ class PdfViewerImpl : PdfViewer {
 
         // Загружаем и обновляем страницы PDF при изменении нотаций
         LaunchedEffect(file, notations) {
+
+            println("@@ $file")
+
             withContext(Dispatchers.IO) {
                 try {
                     val renderer = PdfRenderer(

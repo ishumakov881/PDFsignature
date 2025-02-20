@@ -25,6 +25,17 @@ import kotlin.math.abs
 import java.security.KeyPairGenerator
 import java.security.Signature
 import java.util.Base64
+import android.provider.MediaStore
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
+import android.net.Uri
+import android.content.ContentValues
+import android.net.Uri as AndroidUri
+import android.content.ContentUris
+import android.os.Build
+import android.os.Environment
+import android.content.Intent
 
 class PdfRepositoryImpl(
     private val context: Context,
@@ -42,16 +53,16 @@ class PdfRepositoryImpl(
     private suspend fun initializeData() {
         if (!isInitialized) {
             val documents = pdfDocumentDao.getAllDocuments().first()
-            if (documents.isEmpty()) {
-                val sampleFile = getPdfFromAssets("sample.pdf")
-                val document = PdfDocumentEntity(
-                    id = UUID.randomUUID().toString(),
-                    title = "Пример документа",
-                    path = sampleFile.path,
-                    addedDate = System.currentTimeMillis()
-                )
-                pdfDocumentDao.insertDocument(document)
-            }
+//            if (documents.isEmpty()) {
+//                val sampleFile = getPdfFromAssets("sample.pdf")
+//                val document = PdfDocumentEntity(
+//                    id = UUID.randomUUID().toString(),
+//                    title = "Пример документа",
+//                    path = sampleFile.path,
+//                    addedDate = System.currentTimeMillis()
+//                )
+//                pdfDocumentDao.insertDocument(document)
+//            }
             isInitialized = true
         }
     }
@@ -69,7 +80,26 @@ class PdfRepositoryImpl(
     }
 
     override suspend fun getPdfFromLocal(uri: String): File = withContext(Dispatchers.IO) {
-        File(uri)
+        try {
+            val docsDir = File(context.filesDir, "documents").apply {
+                if (!exists()) mkdirs()
+            }
+
+            // Генерируем уникальное имя файла
+            val fileName = "doc_${System.currentTimeMillis()}.pdf"
+            val destinationFile = File(docsDir, fileName)
+
+            // Копируем содержимое из URI в файл
+            context.contentResolver.openInputStream(AndroidUri.parse(uri))?.use { input ->
+                FileOutputStream(destinationFile).use { output ->
+                    input.copyTo(output)
+                }
+            } ?: throw IllegalStateException("Не удалось открыть файл")
+
+            destinationFile
+        } catch (e: Exception) {
+            throw Exception("Ошибка при сохранении файла: ${e.message}")
+        }
     }
 
     override suspend fun getPdfFromRemote(url: String): File {
@@ -77,7 +107,8 @@ class PdfRepositoryImpl(
     }
 
 
-    suspend fun savePdfWithSignature1(file: File, signature: Bitmap, notation: SignatureNotation
+    suspend fun savePdfWithSignature1(
+        file: File, signature: Bitmap, notation: SignatureNotation
     ): File = withContext(Dispatchers.IO) {
         println("DEBUG: PdfRepositoryImpl: Сохраняем подпись для файла ${file.name}")
         println("DEBUG: PdfRepositoryImpl: Размер подписи ${signature.width}x${signature.height}")
@@ -101,8 +132,6 @@ class PdfRepositoryImpl(
         pdfDocumentDao.updateHasNotations(notation.documentId, true)/*UI Trigger*/
         file
     }
-
-
 
 
     override suspend fun savePdfWithSignature(
@@ -187,21 +216,43 @@ class PdfRepositoryImpl(
             }
     }
 
-    override suspend fun removeSignatureFromPdf(file: File, page: Int, x: Float, y: Float): File = withContext(Dispatchers.IO) {
-        val signatureKey = "${file.name}_${page}_${x}_${y}"
-        signatureBitmaps.remove(signatureKey)
-        file
-    }
+    override suspend fun removeSignatureFromPdf(file: File, page: Int, x: Float, y: Float): File =
+        withContext(Dispatchers.IO) {
+            val signatureKey = "${file.name}_${page}_${x}_${y}"
+            signatureBitmaps.remove(signatureKey)
+            file
+        }
 
     override suspend fun saveDocument(document: PdfDocument) {
-        val entity = PdfDocumentEntity(
-            id = document.id,
-            title = document.title,
-            path = document.path,
-            addedDate = document.addedDate,
-            hasNotations = false
-        )
-        pdfDocumentDao.insertDocument(entity)
+        try {
+            // Создаем директорию если её нет
+            val docsDir = File(context.filesDir, "documents").apply {
+                if (!exists()) mkdirs()
+            }
+
+            // Генерируем уникальное имя файла
+            val fileName = "doc_${System.currentTimeMillis()}.pdf"
+            val destinationFile = File(docsDir, fileName)
+
+            // Копируем содержимое из URI в файл
+            context.contentResolver.openInputStream(AndroidUri.parse(document.path))?.use { input ->
+                FileOutputStream(destinationFile).use { output ->
+                    input.copyTo(output)
+                }
+            } ?: throw IllegalStateException("Не удалось открыть файл")
+
+            // Сохраняем документ с путем к локальной копии
+            val entity = PdfDocumentEntity(
+                id = document.id,
+                title = document.title,
+                path = getRelativePath(destinationFile),
+                addedDate = document.addedDate,
+                hasNotations = false
+            )
+            pdfDocumentDao.insertDocument(entity)
+        } catch (e: Exception) {
+            throw Exception("Ошибка при сохранении документа: ${e.message}")
+        }
     }
 
     override suspend fun updateNotationPosition(
@@ -297,40 +348,37 @@ class PdfRepositoryImpl(
         file: File,
         notations: List<SignatureNotation>
     ): File = withContext(Dispatchers.IO) {
-        println("DEBUG: PdfRepositoryImpl: Создаем копию PDF с подписями")
 
-        // Создаем новый файл для подписанного PDF с таймстампом
+        // Создаем временный файл для подписанного PDF
         val timestamp = System.currentTimeMillis()
-        val signedFile = File(context.cacheDir, "signed_${timestamp}_${file.name}")
+        val fileName = "signed_${timestamp}_${file.name}"
+        val tempSignedFile = File(context.cacheDir, fileName)
 
-        // Загружаем исходный PDF
+
+        println("DEBUG: PdfRepositoryImpl: Создаем копию PDF с подписями ${file.absolutePath}")
+        println("DEBUG: PdfRepositoryImpl: Создаем копию PDF с подписями ${tempSignedFile.absolutePath}")
+
+
         PDDocument.load(file).use { document ->
-            println("DEBUG: PdfRepositoryImpl: Добавляем ${notations.size} подписей")
+            // Добавляем подписи на страницы
+            notations.forEach { notation ->
+                notation.signatureBitmap?.let { bitmap ->
+                    val page = document.getPage(notation.page)
+                    val pageWidth = page.mediaBox.width
+                    val pageHeight = page.mediaBox.height
 
-            // Для каждой нотации с подписью
-            notations.filter { it.signatureBitmap != null }.forEach { notation ->
-                println("DEBUG: PdfRepositoryImpl: Добавляем подпись на страницу ${notation.page}")
+                    // Конвертируем проценты в координаты PDF
+                    val x = (notation.x / 100f) * pageWidth
+                    val y = pageHeight - ((notation.y / 100f) * pageHeight) // Инвертируем Y
 
-                // Получаем страницу
-                val page = document.getPage(notation.page)
-
-                // Создаем поток для рисования
-                PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND,
-                    true
-                ).use { contentStream ->
-                    // Конвертируем подпись в формат PDImageXObject
-                    val signatureImage = notation.signatureBitmap?.let { bitmap ->
-                        LosslessFactory.createFromImage(document, bitmap)
-                    }
-
-                    // Вычисляем позицию подписи
-                    signatureImage?.let { image ->
-                        val pageWidth = page.mediaBox.width
-                        val pageHeight = page.mediaBox.height
-
-                        // Конвертируем проценты в координаты PDF
-                        val x = (notation.x / 100f) * pageWidth
-                        val y = pageHeight - ((notation.y / 100f) * pageHeight) // Инвертируем Y
+                    PDPageContentStream(
+                        document,
+                        page,
+                        PDPageContentStream.AppendMode.APPEND,
+                        true,
+                        true
+                    ).use { contentStream ->
+                        val image = LosslessFactory.createFromImage(document, bitmap)
 
                         // Рисуем подпись
                         contentStream.drawImage(
@@ -338,90 +386,208 @@ class PdfRepositoryImpl(
                             x - (image.width / 2f),
                             y - (image.height / 2f)
                         )
-                        println("DEBUG: PdfRepositoryImpl: Подпись добавлена в позицию ($x, $y)")
-                        
-                        // Добавляем метаданные о подписи
-                        val info = document.documentInformation
-                        info.setCustomMetadataValue("Signature_${notation.page}_${notation.x}_${notation.y}", 
-                            "Added: ${Date()}, Page: ${notation.page}")
                     }
                 }
             }
 
-            // TODO: Добавить криптографическую подпись
-            // 1. Генерируем пару ключей RSA
-//            val keyPairGenerator = KeyPairGenerator.getInstance("RSA")
-//            keyPairGenerator.initialize(2048)
-//            val keyPair = keyPairGenerator.generateKeyPair()
-//
-//            // 2. Создаем подпись документа
-//            val signature = Signature.getInstance("SHA256withRSA")
-//            signature.initSign(keyPair.private)
-//
-//            // 3. Добавляем данные в подпись
-//            document.documentCatalog.cosObject.toString().toByteArray().let { bytes ->
-//                signature.update(bytes)
-//            }
-//
-//            // 4. Получаем цифровую подпись
-//            val digitalSignature = signature.sign()
-//
-//            // 5. Сохраняем подпись в метаданных документа
-//            document.documentInformation.setCustomMetadataValue(
-//                "DigitalSignature",
-//                Base64.getEncoder().encodeToString(digitalSignature)
-//            )
-//            document.documentInformation.setCustomMetadataValue(
-//                "SignatureTimestamp",
-//                timestamp.toString()
-//            )
-//            document.documentInformation.setCustomMetadataValue(
-//                "SignaturePublicKey",
-//                Base64.getEncoder().encodeToString(keyPair.public.encoded)
-//            )
-
-            // Сохраняем PDF с подписями
-            document.save(signedFile)
-            println("DEBUG: PdfRepositoryImpl: PDF сохранен с цифровой подписью: ${signedFile.path}")
+            // Сохраняем временный файл
+            document.save(tempSignedFile)
         }
 
-        signedFile
+
+
+        try {
+            // После сохранения во временный файл
+            savePdfToDownloads(context, tempSignedFile, fileName)
+        } catch (e: Exception) {
+            throw Exception("Ошибка при сохранении файла: ${e.message}")
+        }
+
+        tempSignedFile
+    }
+
+    private fun savePdfToDownloads(context: Context, tempSignedFile: File, fileName: String) {
+        // Сохраняем файл через MediaStore
+        val contentValues = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+            } else {
+                val downloadsDir =
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                val file = File(downloadsDir, fileName)
+                put(MediaStore.MediaColumns.DATA, file.absolutePath) // Для API 28 и ниже
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
+        }
+        val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        } else {
+            MediaStore.Files.getContentUri("external") // Для Android ниже API 29
+        }
+
+        val resolver = context.contentResolver
+        val uri = resolver.insert(collection, contentValues)
+            ?: throw Exception("Не удалось создать файл")
+
+
+        resolver.openOutputStream(uri)?.use { outputStream ->
+            tempSignedFile.inputStream().use { inputStream ->
+                inputStream.copyTo(outputStream)
+            }
+        } ?: throw Exception("Не удалось открыть поток для записи")
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            contentValues.clear()
+            contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
+            resolver.update(uri, contentValues, null, null)
+        }
+
+        // Показываем уведомление о сохранении
+        Handler(Looper.getMainLooper()).post {
+            Toast.makeText(context, "PDF сохранен в Downloads: $fileName", Toast.LENGTH_LONG).show()
+        }
     }
 
     override suspend fun getSignedDocuments(): Flow<List<PdfDocument>> = flow {
+        val documents = mutableListOf<PdfDocument>()
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Для Android 10 и выше используем MediaStore
+            val projection = arrayOf(
 
-        println("@@@ ${context.cacheDir}")
-
-        val signedFiles = context.cacheDir.listFiles { file ->
-            file.name.startsWith("signed_") && file.name.endsWith(".pdf")
-        }?.toList() ?: emptyList()
-
-        val documents = signedFiles.map { file ->
-            val nameParts = file.name.split("_", limit = 3)
-            val timestamp = nameParts[1].toLongOrNull() ?: file.lastModified()
-            val originalName = nameParts.getOrNull(2) ?: file.name
-
-            PdfDocument(
-                id = file.name,
-                title = file.name,/*originalName*/
-                path = file.absolutePath,
-                addedDate = timestamp
+                MediaStore.Downloads.DISPLAY_NAME,
+                MediaStore.Downloads.DATE_ADDED,
+                MediaStore.Downloads._ID //aka MediaStore.MediaColumns._ID
             )
-        }.sortedByDescending { it.addedDate } // Сортируем по времени создания, новые сверху
 
-        emit(documents)
+            val selection =
+                "${MediaStore.Downloads.DISPLAY_NAME} LIKE ? AND ${MediaStore.Downloads.MIME_TYPE} = ?"
+            val selectionArgs = arrayOf("signed_%", "application/pdf")
+            val sortOrder = "${MediaStore.Downloads.DATE_ADDED} DESC"
+
+
+            val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI
+            } else {
+                MediaStore.Files.getContentUri("external") // Для Android ниже API 29
+            }
+
+            context.contentResolver.query(
+                collection,
+                projection,
+                selection,
+                selectionArgs,
+                sortOrder
+            )?.use { cursor ->
+                val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Downloads.DISPLAY_NAME)
+                val dateColumn = cursor.getColumnIndexOrThrow(MediaStore.Downloads.DATE_ADDED)
+                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID)
+
+                while (cursor.moveToNext()) {
+                    val name = cursor.getString(nameColumn)
+                    val dateAdded = cursor.getLong(dateColumn) * 1000
+                    val id = cursor.getLong(idColumn)
+
+                    val contentUri = ContentUris.withAppendedId(collection, id)
+
+                    documents.add(
+                        PdfDocument(
+                            id = id.toString(),
+                            title = name,
+                            path = contentUri.toString(),
+                            addedDate = dateAdded
+                        )
+                    )
+                }
+            }
+        } else {
+            // Для более старых версий ищем файлы в Downloads напрямую
+            val downloadsDir =
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val files = downloadsDir.listFiles { file ->
+                file.name.startsWith("signed_") && file.name.endsWith(".pdf")
+            }
+
+            files?.forEach { file ->
+                documents.add(
+                    PdfDocument(
+                        id = file.name /*file.absolutePath*/,
+                        title = file.name,
+                        path = file.absolutePath,
+                        addedDate = file.lastModified()
+                    )
+                )
+            }
+        }
+
+        emit(documents.sortedByDescending { it.addedDate })
     }.flowOn(Dispatchers.IO)
 
-    override suspend fun getSignedDocumentFile(fileName: String): File = withContext(Dispatchers.IO) {
-        File(context.cacheDir, fileName)
-    }
+    override suspend fun getSignedDocumentFile(fileName: String): File =
+        withContext(Dispatchers.IO) {
+            val tempFile = File(context.cacheDir, "temp_view_$fileName")
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    // Для Android 10 и выше используем MediaStore
+                    val projection = arrayOf(MediaStore.Downloads._ID)
+                    //val selection = "${MediaStore.Downloads.DISPLAY_NAME} = ?"
+                    val selection = "${MediaStore.Downloads._ID} = ?"
+
+                    val selectionArgs = arrayOf(fileName)
+
+                    context.contentResolver.query(
+                        MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                        projection, selection, selectionArgs, null
+                    )?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val id =
+                                cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID))
+                            val contentUri = ContentUris.withAppendedId(
+                                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                                id
+                            )
+                            println("[URI] $contentUri")
+                            context.contentResolver.openInputStream(contentUri)?.use { input ->
+                                FileOutputStream(tempFile).use { output ->
+                                    input.copyTo(output)
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Для более старых версий копируем файл из Downloads напрямую
+                    val downloadsDir =
+                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                    val sourceFile = File(downloadsDir, fileName)
+
+                    if (sourceFile.exists()) {
+                        sourceFile.inputStream().use { input ->
+                            FileOutputStream(tempFile).use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                    }
+                }
+
+                if (!tempFile.exists()) {
+                    throw Exception("Файл не найден $fileName")
+                }
+
+                tempFile
+            } catch (e: Exception) {
+                throw Exception("Ошибка при получении файла: ${e.message}")
+            }
+        }
 
     private fun PdfDocumentEntity.toDomain() = PdfDocument(
         id = id,
         title = title,
         addedDate = addedDate,
-        path = path
+        path = File(context.filesDir, path).absolutePath
     )
 
     private fun SignatureNotationEntity.toDomain() = SignatureNotation(
@@ -434,8 +600,64 @@ class PdfRepositoryImpl(
 
     override suspend fun resetSignatures(documentId: String) {
         // Очищаем все битмапы для данного документа из кэша
-        signatureBitmaps.entries.removeIf { (key, _) -> 
+        signatureBitmaps.entries.removeIf { (key, _) ->
             key.startsWith("${documentId}_")
         }
+    }
+
+    override suspend fun deleteDocument0(document: PdfDocument): Unit = withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
+            val entity = PdfDocumentEntity(
+                id = document.id,
+                title = document.title,
+                path = "",
+                addedDate = document.addedDate,
+                hasNotations = false
+            )
+            pdfDocumentDao.deleteDocument(entity)
+        }
+    }
+
+    override suspend fun deleteSignedDocument(documentId: String): Unit =
+        withContext(Dispatchers.IO) {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    // Для Android 10 и выше используем MediaStore
+                    val uri = ContentUris.withAppendedId(
+                        MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                        documentId.toLong()
+                    )
+                    val rowsDeleted = context.contentResolver.delete(uri, null, null)
+                    if (rowsDeleted <= 0) {
+                        throw Exception("Не удалось удалить файл через MediaStore")
+                    }
+                } else {
+                    // Для более старых версий удаляем файл напрямую
+                    val file = File(documentId) // В старых версиях ID это путь к файлу
+                    if (!file.exists() || !file.delete()) {
+                        throw Exception("Не удалось удалить файл")
+                    }
+                }
+
+                // Показываем уведомление об успешном удалении
+                Handler(Looper.getMainLooper()).post {
+                    Toast.makeText(context, "Документ удален", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                throw Exception("Ошибка при удалении документа: ${e.message}")
+            }
+        }
+
+    // Новый метод для получения относительного пути
+    private fun getRelativePath(file: File): String {
+        return file.absolutePath.substringAfter(context.filesDir.absolutePath + "/")
+    }
+
+    private fun getFileProviderUri(file: File): android.net.Uri {
+        return androidx.core.content.FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.provider",
+            file
+        )
     }
 } 
