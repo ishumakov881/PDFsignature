@@ -15,6 +15,7 @@ import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
 import org.koin.core.logger.Level
 import org.koin.dsl.module
+import java.io.File
 
 class PdfSignatureApp : Application() {
     override fun onCreate() {
@@ -33,5 +34,24 @@ class PdfSignatureApp : Application() {
             androidContext(this@PdfSignatureApp)
             modules(listOf(x, appModule, databaseModule))
         }
+
+        clearAppCache(this)
     }
+
+
+    fun clearAppCache(context: Context) {
+        val cacheDir = context.cacheDir
+        deleteDirectory(cacheDir)
+    }
+
+    private fun deleteDirectory(dir: File?): Boolean {
+        if (dir != null && dir.isDirectory) {
+            val children = dir.listFiles()
+            children?.forEach { child ->
+                deleteDirectory(child)
+            }
+        }
+        return dir?.delete() ?: false
+    }
+
 } 

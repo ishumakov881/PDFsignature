@@ -273,9 +273,7 @@ class PdfRepositoryImpl(
 
         // Находим нужную нотацию по старым координатам
         val notation = notations.find {
-            it.page == page &&
-                    abs(it.xPercent - oldX) < 0.1f &&
-                    abs(it.yPercent - oldY) < 0.1f
+            it.page == page && abs(it.xPercent - oldX) < 0.1f && abs(it.yPercent - oldY) < 0.1f
         }
 
         if (notation != null) {
@@ -344,10 +342,7 @@ class PdfRepositoryImpl(
         }
     }
 
-    override suspend fun createSignedPdfCopy(
-        file: File,
-        notations: List<SignatureNotation>
-    ): File = withContext(Dispatchers.IO) {
+    override suspend fun createSignedPdfCopy(file: File, notations: List<SignatureNotation>): File = withContext(Dispatchers.IO) {
 
         // Создаем временный файл для подписанного PDF
         val timestamp = System.currentTimeMillis()
@@ -371,21 +366,14 @@ class PdfRepositoryImpl(
                     val x = (notation.x / 100f) * pageWidth
                     val y = pageHeight - ((notation.y / 100f) * pageHeight) // Инвертируем Y
 
-                    PDPageContentStream(
-                        document,
-                        page,
-                        PDPageContentStream.AppendMode.APPEND,
+                    PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND,
                         true,
                         true
                     ).use { contentStream ->
                         val image = LosslessFactory.createFromImage(document, bitmap)
 
                         // Рисуем подпись
-                        contentStream.drawImage(
-                            image,
-                            x - (image.width / 2f),
-                            y - (image.height / 2f)
-                        )
+                        contentStream.drawImage(image, x - (image.width / 2f), y - (image.height / 2f))
                     }
                 }
             }
@@ -430,8 +418,7 @@ class PdfRepositoryImpl(
         }
 
         val resolver = context.contentResolver
-        val uri = resolver.insert(collection, contentValues)
-            ?: throw Exception("Не удалось создать файл")
+        val uri = resolver.insert(collection, contentValues) ?: throw Exception("Не удалось создать файл")
 
 
         resolver.openOutputStream(uri)?.use { outputStream ->
@@ -446,10 +433,10 @@ class PdfRepositoryImpl(
             resolver.update(uri, contentValues, null, null)
         }
 
-        // Показываем уведомление о сохранении
-        Handler(Looper.getMainLooper()).post {
-            Toast.makeText(context, "PDF сохранен в Downloads: $fileName", Toast.LENGTH_LONG).show()
-        }
+//        // Показываем уведомление о сохранении
+//        Handler(Looper.getMainLooper()).post {
+//            Toast.makeText(context, "PDF сохранен в Downloads: $fileName", Toast.LENGTH_LONG).show()
+//        }
     }
 
     override suspend fun getSignedDocuments(): Flow<List<PdfDocument>> = flow {

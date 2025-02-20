@@ -148,7 +148,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     // Выбор типа маркера
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             text = "Тип маркера",
                             style = MaterialTheme.typography.bodyMedium
@@ -159,7 +159,7 @@ fun SettingsScreen(
                         ) {
                             MarkerButton(
                                 "RECTANGLE",
-                                "Прямоугольник",
+                                "Рамка",
                                 currentMarkerType
                             ) { viewModel.setMarkerType(it) }
                             MarkerButton(

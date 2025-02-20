@@ -110,9 +110,7 @@ fun SignaturePadDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Surface(
-                    modifier = Modifier
-                        .width(268.dp)
-                        .height(120.dp),
+                    modifier = Modifier.width(268.dp).height(120.dp),
                     shape = MaterialTheme.shapes.small,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
                     color = MaterialTheme.colorScheme.surface

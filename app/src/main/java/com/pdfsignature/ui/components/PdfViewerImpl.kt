@@ -176,7 +176,7 @@ class PdfViewerImpl : PdfViewer {
                     val newBitmaps = mutableMapOf<Int, Bitmap>()
                     for (pageIndex in 0 until pageCount) {
                         val page = renderer.openPage(pageIndex)
-                        val scale = 2 // Масштаб для лучшего качества
+                        val scale = 1 //1 Масштаб для лучшего качества
                         val bitmap = Bitmap.createBitmap(
                             page.width * scale,
                             page.height * scale,

@@ -1,4 +1,4 @@
-val room_version = "2.6.1"
+val roomVersion = "2.6.1"
 
 plugins {
     alias(libs.plugins.android.application)
@@ -8,6 +8,8 @@ plugins {
     //Room
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
+    alias(libs.plugins.google.gms.google.services)
+    alias(libs.plugins.google.firebase.crashlytics)
 }
 
 android {
@@ -66,7 +68,8 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.accompanist.permissions)
     implementation(libs.signature.pad)
-    
+    implementation(libs.firebase.crashlytics)
+
 //    // Добавляем BouncyCastle для криптографической подписи
 //    implementation("org.bouncycastle:bcprov-jdk15on:1.70")
 //    implementation("org.bouncycastle:bcpkix-jdk15on:1.70")
@@ -86,18 +89,18 @@ dependencies {
     implementation(libs.koin.compose)
     implementation(libs.koin.compose.navigation)
 
-    implementation("androidx.room:room-runtime:$room_version")
-    implementation("androidx.room:room-ktx:$room_version")
-    implementation("androidx.compose.material:material-icons-extended:1.7.8")
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.material.icons.extended)
     implementation(libs.accompanist.permissions)
     // If this project uses any Kotlin source, use Kotlin Symbol Processing (KSP)
     // See Add the KSP plugin to your project
-    ksp("androidx.room:room-compiler:$room_version")
+    ksp(libs.androidx.room.compiler)
 
     //implementation("com.github.barteksc:android-pdf-viewer:2.8.2")
-    implementation("com.github.VERO-Digital-Solutions:AndroidPdfViewerV2:1195a3d7d6") {
-        exclude(group = "com.android.support")
-    }
+//    implementation("com.github.VERO-Digital-Solutions:AndroidPdfViewerV2:1195a3d7d6") {
+//        exclude(group = "com.android.support")
+//    }
 
     implementation(libs.androidx.datastore.preferences)
 }
