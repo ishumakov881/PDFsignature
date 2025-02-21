@@ -9,8 +9,8 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-          name: Start test 1
-          run: whoami
+              name: Start test 1
+              run: whoami
 
-          name: Start test 2
-          run: ls
+              name: Start test 2
+              run: ls
