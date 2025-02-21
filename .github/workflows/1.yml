@@ -1,1 +1,4 @@
 name: Start test and deploy
+on:
+  push:
+    branches: master
