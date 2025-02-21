@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PDF Signature</string>
+    
+    <!-- DocumentListScreen -->
+    <string name="documents">Documenti</string>
+    <string name="settings">Impostazioni</string>
+    <string name="import_pdf">Importa PDF</string>
+    <string name="search_documents">Cerca documenti…</string>
+    <string name="no_documents">Nessun documento disponibile</string>
+    <string name="nothing_found">Nessun risultato</string>
+    <string name="click_import">Clicca sul pulsante importa per aggiungere PDF</string>
+    <string name="delete">Elimina</string>
+    <string name="view">Visualizza</string>
+    <string name="edit">Modifica</string>
+    <string name="error">Errore</string>
+    <string name="ok">OK</string>
+    <string name="file_selection_error">Errore nella selezione del file: %1$s</string>
+</resources> 

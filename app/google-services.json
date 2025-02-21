@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "652328516367",
+    "project_id": "pdfsignature-91a45",
+    "storage_bucket": "pdfsignature-91a45.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:652328516367:android:c17f238101fa13bfe95c7a",
+        "android_client_info": {
+          "package_name": "com.walhalla.pdfsignature"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAps5vOyR67Vk8q5mPdFsBK9zIujfAS-JE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

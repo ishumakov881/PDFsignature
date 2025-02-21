@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PDF Signature</string>
+    
+    <!-- DocumentListScreen -->
+    <string name="documents">ドキュメント</string>
+    <string name="settings">設定</string>
+    <string name="import_pdf">PDFをインポート</string>
+    <string name="search_documents">ドキュメントを検索…</string>
+    <string name="no_documents">利用可能なドキュメントがありません</string>
+    <string name="nothing_found">何も見つかりませんでした</string>
+    <string name="click_import">インポートボタンをクリックしてPDFを追加</string>
+    <string name="delete">削除</string>
+    <string name="view">表示</string>
+    <string name="edit">編集</string>
+    <string name="error">エラー</string>
+    <string name="ok">OK</string>
+    <string name="file_selection_error">ファイル選択エラー：%1$s</string>
+</resources> 

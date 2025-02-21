@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PDF Signature</string>
+    
+    <!-- DocumentListScreen -->
+    <string name="documents">Документы</string>
+    <string name="settings">Настройки</string>
+    <string name="import_pdf">Импорт PDF</string>
+    <string name="search_documents">Поиск документов…</string>
+    <string name="no_documents">Нет доступных документов</string>
+    <string name="nothing_found">Ничего не найдено</string>
+    <string name="click_import">Нажмите на кнопку импорта чтобы добавить PDF</string>
+    <string name="delete">Удалить</string>
+    <string name="view">Просмотр</string>
+    <string name="edit">Редактировать</string>
+    <string name="error">Ошибка</string>
+    <string name="ok">OK</string>
+    <string name="file_selection_error">Ошибка при выборе файла: %1$s</string>
+</resources> 

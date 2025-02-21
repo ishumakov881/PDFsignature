@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PDF Signature</string>
+    
+    <!-- DocumentListScreen -->
+    <string name="documents">文档</string>
+    <string name="settings">设置</string>
+    <string name="import_pdf">导入PDF</string>
+    <string name="search_documents">搜索文档…</string>
+    <string name="no_documents">没有可用文档</string>
+    <string name="nothing_found">未找到任何内容</string>
+    <string name="click_import">点击导入按钮添加PDF</string>
+    <string name="delete">删除</string>
+    <string name="view">查看</string>
+    <string name="edit">编辑</string>
+    <string name="error">错误</string>
+    <string name="ok">确定</string>
+    <string name="file_selection_error">文件选择错误：%1$s</string>
+</resources> 
