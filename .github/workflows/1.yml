@@ -1,4 +1,16 @@
 name: Start test and deploy
 on:
   push:
-    branches: [ "master" ]
+      branches: [ "master" ]
+
+jobs:
+    test:
+        name: Check repository
+        runs-on: ubuntu-latest
+
+        steps:
+          name: Start test 1
+          run: whoami
+
+          name: Start test 2
+          run: ls
