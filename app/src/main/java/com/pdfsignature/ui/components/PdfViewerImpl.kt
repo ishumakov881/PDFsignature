@@ -1,15 +1,20 @@
 package com.pdfsignature.ui.components
 
 import android.graphics.Bitmap
-import android.graphics.Canvas
+
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import android.widget.Toast
+
+import androidx.compose.foundation.Canvas
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -23,7 +28,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color.Companion.Blue
+
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -39,7 +49,7 @@ import java.io.File
 
 class PdfViewerImpl : PdfViewer {
 
-    private fun drawMarkerCross(canvas: Canvas, centerX: Float, centerY: Float, radius: Float) {
+    private fun drawMarkerCross(canvas: android.graphics.Canvas, centerX: Float, centerY: Float, radius: Float) {
         val size = radius * 5 // Уменьшаем размер крестика в 2 раза
         
         // Рисуем красный крестик
@@ -82,7 +92,7 @@ class PdfViewerImpl : PdfViewer {
         )
     }
 
-    private fun drawMarkerRectangle(canvas: Canvas, centerX: Float, centerY: Float, radius: Float) {
+    private fun drawMarkerRectangle(canvas: android.graphics.Canvas, centerX: Float, centerY: Float, radius: Float) {
         val point = radius * 10 / 12
         val width = point * 12
         val height = point * 9
@@ -112,7 +122,7 @@ class PdfViewerImpl : PdfViewer {
         canvas.drawRect(left, top, right, bottom, strokePaint)
     }
 
-    private fun drawMarkerDot(canvas: Canvas, centerX: Float, centerY: Float, radius: Float) {
+    private fun drawMarkerDot(canvas: android.graphics.Canvas, centerX: Float, centerY: Float, radius: Float) {
         // Рисуем красную точку
         val dotPaint = Paint().apply {
             color = Color.RED
@@ -133,7 +143,7 @@ class PdfViewerImpl : PdfViewer {
         canvas.drawCircle(centerX, centerY, radius * 5, strokePaint)
     }
 
-    private fun drawMarker(canvas: Canvas, centerX: Float, centerY: Float, radius: Float, markerType: String) {
+    private fun drawMarker(canvas: android.graphics.Canvas, centerX: Float, centerY: Float, radius: Float, markerType: String) {
         when (markerType) {
             "RECTANGLE" -> drawMarkerRectangle(canvas, centerX, centerY, radius)
             "DOT" -> drawMarkerDot(canvas, centerX, centerY, radius)
@@ -159,6 +169,7 @@ class PdfViewerImpl : PdfViewer {
         var imageSize by remember { mutableStateOf(Size(0f, 0f)) }
         val listState = rememberLazyListState()
 
+        var currentNotation : PdfNotation? by remember { mutableStateOf(null) }
         var hasSignature by remember { mutableStateOf(false) }
 
         // Загружаем и обновляем страницы PDF при изменении нотаций
@@ -177,9 +188,7 @@ class PdfViewerImpl : PdfViewer {
                     for (pageIndex in 0 until pageCount) {
                         val page = renderer.openPage(pageIndex)
                         val scale = 1 //1 Масштаб для лучшего качества
-                        val bitmap = Bitmap.createBitmap(
-                            page.width * scale,
-                            page.height * scale,
+                        val bitmap = Bitmap.createBitmap(page.width * scale, page.height * scale,
                             Bitmap.Config.ARGB_8888
                         )
                         page.render(bitmap,
@@ -193,7 +202,7 @@ class PdfViewerImpl : PdfViewer {
                             val overlayBitmap = bitmap.copy(bitmap.config!!, true)
                             bitmap.recycle() // Освобождаем оригинальный битмап
 
-                            val canvas = Canvas(overlayBitmap)
+                            val canvas = android.graphics.Canvas(overlayBitmap)
 
                             // Рисуем нотации
                             notations.filter { it.page == pageIndex }.forEach { notation ->
@@ -205,6 +214,7 @@ class PdfViewerImpl : PdfViewer {
                                 val radius = overlayBitmap.width * 0.015f
 
                                 // Рисуем маркер
+                                currentNotation = notation
                                 hasSignature = notation.signatureBitmap != null
 
                                 if (!hasSignature) {
@@ -220,8 +230,14 @@ class PdfViewerImpl : PdfViewer {
                                 notation.signatureBitmap?.let { signatureBitmap ->
                                     val signatureX = centerX - (signatureBitmap.width / 2f)
                                     val signatureY = centerY - (signatureBitmap.height / 2f)
+
+
+
+                                    /*123*/
                                     canvas.drawBitmap(signatureBitmap, signatureX, signatureY, null)
+                                    /*123*/
                                 }
+
                             }
 
                             newBitmaps[pageIndex] = overlayBitmap
@@ -249,6 +265,9 @@ class PdfViewerImpl : PdfViewer {
             }
         }
 
+
+
+
         // Очищаем битмапы при уничтожении компонента
         DisposableEffect(Unit) {
             onDispose {
@@ -275,10 +294,7 @@ class PdfViewerImpl : PdfViewer {
             color = MaterialTheme.colorScheme.surface,
             shadowElevation = 8.dp
         ) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(pageCount) { pageIndex ->
                     pageBitmaps[pageIndex]?.let { bitmap ->
@@ -318,10 +334,7 @@ class PdfViewerImpl : PdfViewer {
                                                 (clickPoint - notationPoint).getDistance() <= radius
                                             }
 
-                                            onPageClick?.invoke(
-                                                pageIndex,
-                                                xPercent,
-                                                yPercent,
+                                            onPageClick?.invoke(pageIndex, xPercent, yPercent,
                                                 existingNotation?.signatureBitmap
                                             )
                                         }
@@ -332,6 +345,84 @@ class PdfViewerImpl : PdfViewer {
                     }
                 }
             }
+
+
+
+            currentNotation?.let {
+                it.signatureBitmap?.let { it1 ->
+
+                    val signatureX = /*centerX */500- (it1.width / 2f)
+                    val signatureY = /*centerY*/ 500- (it1.height / 2f)
+
+                    MovableResizableSignature(
+                        signatureBitmap = it1,
+                        modifier = Modifier.fillMaxSize(),
+                        initialPosition = Offset(signatureX, signatureY)
+                    )
+                }
+            }
         }
     }
-} 
+}
+@Composable
+fun MovableResizableSignature(
+    signatureBitmap: Bitmap,
+    modifier: Modifier = Modifier,
+    initialPosition: Offset = Offset.Zero,
+) {
+    var position by remember { mutableStateOf(initialPosition) }
+    var scale by remember { mutableStateOf(1f) }
+    var rotation by remember { mutableStateOf(0f) }
+    var isInteracting by remember { mutableStateOf(false) } // Состояние для отслеживания взаимодействия
+
+    Box(
+        modifier = modifier
+            .pointerInput(Unit) {
+                // Обработка начала взаимодействия
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.changes.any { it.pressed }) {
+                            isInteracting = true // Начало взаимодействия
+                        } else {
+                            isInteracting = false // Конец взаимодействия
+                        }
+                    }
+                }
+            }
+            .pointerInput(Unit) {
+                detectTransformGestures { _, pan, zoom, rotationChange ->
+                    position += pan
+                    scale = (scale * zoom).coerceIn(0.3f, 3f) // Ограничиваем масштаб
+                    rotation += rotationChange
+                }
+            }
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            with(drawContext.canvas.nativeCanvas) {
+                save()
+                translate(position.x, position.y)
+                rotate(rotation)
+                scale(scale, scale)
+
+                // Рисуем битмап
+                drawImage(signatureBitmap.asImageBitmap())
+
+                restore()
+            }
+
+            // Рисуем рамку только во время взаимодействия
+            if (isInteracting) {
+                drawRect(
+                    color = Blue,
+                    style = Stroke(width = 3.dp.toPx()),
+                    topLeft = Offset(position.x, position.y),
+                    size = Size(
+                        signatureBitmap.width * scale,
+                        signatureBitmap.height * scale
+                    )
+                )
+            }
+        }
+    }
+}
